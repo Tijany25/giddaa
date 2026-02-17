@@ -187,6 +187,58 @@ function getBandBarColor(rate: number): string {
   return 'bg-blue-600';
 }
 
+function parseNaira(str: string): number {
+  const cleaned = str.replace(/[₦,\s]/g, '');
+  const num = parseFloat(cleaned);
+  return isNaN(num) ? 0 : Math.max(0, Math.round(num)); // round to whole ₦
+}
+
+function formatNaira(value: number): string {
+  if (value === 0) return '₦0';
+  return `₦${value.toLocaleString('en-NG')}`;
+}
+
+function MoneyInput({
+  label,
+  value,        
+  onChange,   
+  hint,
+}: {
+  label: string;
+  value: number;
+  onChange: (newValue: number) => void;
+  hint?: string;
+}) {
+  const [displayValue, setDisplayValue] = useState(formatNaira(value));
+
+  useEffect(() => {
+    setDisplayValue(formatNaira(value));
+  }, [value]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const input = e.target.value;
+    const num = parseNaira(input);
+
+    onChange(num);
+
+    setDisplayValue(formatNaira(num));
+  };
+
+  return (
+    <div className="space-y-2">
+      <label className="block text-sm font-semibold text-gray-800">{label}</label>
+      <input
+        type="text"
+        value={displayValue}
+        onChange={handleChange}
+        placeholder="₦0"
+        className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-gray-800 placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-[#2C59C3]/30 focus:border-[#2C59C3] transition-all"
+      />
+      {hint && <p className="text-xs text-gray-500">{hint}</p>}
+    </div>
+  );
+}
+
 
 export default function BusinessTaxCalculator() {
   const currentYear = new Date().getFullYear();
@@ -194,7 +246,7 @@ export default function BusinessTaxCalculator() {
   const [selectedIndustryId, setSelectedIndustryId] = useState('');
   const [revenueRange, setRevenueRange]               = useState('');
   const [madeProfit, setMadeProfit]                   = useState('');
-  const [netProfit, setNetProfit]                     = useState('');
+  const [netProfit, setNetProfit]                     = useState(0);
   const [incorporationYear, setIncorporationYear]     = useState('');
 
   const {
@@ -224,13 +276,13 @@ export default function BusinessTaxCalculator() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setRevenueRange('');
     setMadeProfit('');
-    setNetProfit('');
+    setNetProfit(0);
     setIncorporationYear('');
   }, [selectedIndustryId]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (madeProfit !== 'yes') setNetProfit('');
+    if (madeProfit !== 'yes') setNetProfit(0);
   }, [madeProfit]);
 
   const result = calculateBusinessTax({
@@ -238,7 +290,7 @@ export default function BusinessTaxCalculator() {
     config: config ?? null,
     madeProfit,
     revenueRange,
-    netProfit: parseInput(netProfit),
+    netProfit: netProfit,
     incorporationYear: incorporationYear ? parseInt(incorporationYear) : null,
   });
 
@@ -246,7 +298,7 @@ export default function BusinessTaxCalculator() {
     setSelectedIndustryId('');
     setRevenueRange('');
     setMadeProfit('');
-    setNetProfit('');
+    setNetProfit(0);
     setIncorporationYear('');
   };
 
@@ -341,7 +393,7 @@ export default function BusinessTaxCalculator() {
               )}
 
               {madeProfit === 'yes' && (
-                <InputField
+                <MoneyInput
                   label="Total Net Profit (₦)"
                   value={netProfit}
                   onChange={setNetProfit}
@@ -396,14 +448,14 @@ export default function BusinessTaxCalculator() {
             {madeProfit === 'yes' && (
               <div className="mt-6 pt-5 border-t border-gray-100 flex items-center justify-between">
                 <span className="text-sm text-gray-500">Total Net Profit</span>
-                <span className="text-lg font-bold text-[#2C59C3]">{fmt(parseInput(netProfit))}</span>
+                <span className="text-lg font-bold text-[#2C59C3]">{fmt(netProfit)}</span>
               </div>
             )}
           </div>
 
           <button
             onClick={handleReset}
-            className="w-full py-4 rounded-2xl border-2 border-[#2C59C3] bg-white text-sm font-semibold text-[#2C59C3] hover:bg-[#2C59C3]/5 transition-all"
+            className="w-full py-4 cursor-pointer rounded-2xl border-2 border-[#2C59C3] bg-white text-sm font-semibold text-[#2C59C3] hover:bg-[#2C59C3]/5 transition-all"
           >
             Reset All
           </button>

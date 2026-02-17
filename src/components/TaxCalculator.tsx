@@ -1,12 +1,28 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { Calculator } from 'lucide-react';
 import type { TaxTab, IncomeInputs, DeductionInputs, TaxResult, TaxCalculatorPayload } from '../types/tax';
 import BusinessTaxCalculator from './BusinessTax';
 import { calculateTax } from '@/services/tax.service';
 
+type IncomeInputsRaw = {
+  salaryIncome:     number;
+  businessIncome:   number;
+  rentalIncome:     number;
+  investmentIncome: number;
+  otherIncome:      number;
+};
+
+type DeductionInputsRaw = {
+  rent:                 number;
+  pensionContribution:  number;
+  nhfContribution:      number;
+  lifeInsurance:        number;
+  nhisPremium:          number;
+  gratitude:            number;
+};
 
 function formatNaira(value: number): string {
   if (value === 0) return '₦0';
@@ -61,6 +77,53 @@ function InputField({ label, value, onChange, hint }: {
   );
 }
 
+function parseNaira(str: string): number {
+  const cleaned = str.replace(/[₦,\s]/g, '');
+  const num = parseFloat(cleaned);
+  return isNaN(num) ? 0 : Math.max(0, Math.round(num)); // round to whole ₦
+}
+
+function MoneyInput({
+  label,
+  value,        
+  onChange,   
+  hint,
+}: {
+  label: string;
+  value: number;
+  onChange: (newValue: number) => void;
+  hint?: string;
+}) {
+  const [displayValue, setDisplayValue] = useState(formatNaira(value));
+
+  useEffect(() => {
+    setDisplayValue(formatNaira(value));
+  }, [value]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const input = e.target.value;
+    const num = parseNaira(input);
+
+    onChange(num);
+
+    setDisplayValue(formatNaira(num));
+  };
+
+  return (
+    <div className="space-y-2">
+      <label className="block text-sm font-semibold text-gray-800">{label}</label>
+      <input
+        type="text"
+        value={displayValue}
+        onChange={handleChange}
+        placeholder="₦0"
+        className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-gray-800 placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-[#2C59C3]/30 focus:border-[#2C59C3] transition-all"
+      />
+      {hint && <p className="text-xs text-gray-500">{hint}</p>}
+    </div>
+  );
+}
+
 function SummaryRow({ label, value, valueClass = 'text-gray-900 text-sm font-semibold', large = false, bordered = false }: {
   label: string; value: string; valueClass?: string; large?: boolean; bordered?: boolean;
 }) {
@@ -85,36 +148,50 @@ function ResultsSkeleton() {
   );
 }
 
-const DEFAULT_INCOME: IncomeInputs = {
-  salaryIncome: '', businessIncome: '', rentalIncome: '', investmentIncome: '', otherIncome: '',
+const DEFAULT_INCOME:  IncomeInputsRaw = {
+  salaryIncome: 0, businessIncome: 0, rentalIncome: 0, investmentIncome: 0, otherIncome: 0,
 };
-const DEFAULT_DEDUCTIONS: DeductionInputs = {
-  rent: '', pensionContribution: '', nhfContribution: '', lifeInsurance: '', nhisPremium: '', gratitude: '',
+const DEFAULT_DEDUCTIONS: DeductionInputsRaw = {
+  rent: 0, pensionContribution: 0, nhfContribution: 0, lifeInsurance: 0, nhisPremium: 0, gratitude: 0,
 };
 
 
 export default function TaxCalculatorPage() {
   const [activeTab, setActiveTab]   = useState<TaxTab>('personal');
-  const [income, setIncome]         = useState<IncomeInputs>(DEFAULT_INCOME);
-  const [deductions, setDeductions] = useState<DeductionInputs>(DEFAULT_DEDUCTIONS);
+  const [income, setIncome] = useState<IncomeInputsRaw>({
+    salaryIncome: 0,
+    businessIncome: 0,
+    rentalIncome: 0,
+    investmentIncome: 0,
+    otherIncome: 0,
+  });
+
+  const [deductions, setDeductions] = useState<DeductionInputsRaw>({
+    rent: 0,
+    pensionContribution: 0,
+    nhfContribution: 0,
+    lifeInsurance: 0,
+    nhisPremium: 0,
+    gratitude: 0,
+  });
 
   const mutation = useMutation({ mutationFn: calculateTax });
 
   const buildPayload = useCallback((): TaxCalculatorPayload => ({
     income: {
-      salaryIncome:     parseInput(income.salaryIncome),
-      businessIncome:   parseInput(income.businessIncome),
-      rentalIncome:     parseInput(income.rentalIncome),
-      investmentIncome: parseInput(income.investmentIncome),
-      otherIncome:      parseInput(income.otherIncome),
+      salaryIncome:  income.salaryIncome,
+      businessIncome:  income.businessIncome,
+      rentalIncome:    income.rentalIncome,
+      investmentIncome: income.investmentIncome,
+      otherIncome:    income.otherIncome,
     },
     deductions: {
-      rent:                parseInput(deductions.rent),
-      pensionContribution: parseInput(deductions.pensionContribution),
-      nhfContribution:     parseInput(deductions.nhfContribution),
-      lifeInsurance:       parseInput(deductions.lifeInsurance),
-      nhisPremium:         parseInput(deductions.nhisPremium),
-      gratitude:           parseInput(deductions.gratitude),
+      rent:               deductions.rent,
+      pensionContribution: (deductions.pensionContribution),
+      nhfContribution:    deductions.nhfContribution,
+      lifeInsurance:      deductions.lifeInsurance,
+      nhisPremium:        deductions.nhisPremium,
+      gratitude:          deductions.gratitude,
     },
   }), [income, deductions]);
 
@@ -128,13 +205,13 @@ export default function TaxCalculatorPage() {
   const isLoading = mutation.isPending;
 
   const totalIncome =
-    parseInput(income.salaryIncome) + parseInput(income.businessIncome) +
-    parseInput(income.rentalIncome) + parseInput(income.investmentIncome) + parseInput(income.otherIncome);
+   income.salaryIncome + income.businessIncome +
+    income.rentalIncome + income.investmentIncome + income.otherIncome;
 
   const totalDeductionsLive =
-    parseInput(deductions.rent) + parseInput(deductions.pensionContribution) +
-    parseInput(deductions.nhfContribution) + parseInput(deductions.lifeInsurance) +
-    parseInput(deductions.nhisPremium) + parseInput(deductions.gratitude);
+    deductions.rent + deductions.pensionContribution +
+    deductions.nhfContribution + deductions.lifeInsurance +
+    deductions.nhisPremium + deductions.gratitude;
 
   return (
     <div className="min-h-screen bg-white">
@@ -151,7 +228,7 @@ export default function TaxCalculatorPage() {
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`px-6 py-2.5 rounded-full text-sm font-semibold transition-all duration-200 capitalize ${
+              className={`px-6 py-2.5 cursor-pointer rounded-full text-sm font-semibold transition-all duration-200 capitalize ${
                 activeTab === tab ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
               }`}
             >
@@ -184,11 +261,11 @@ export default function TaxCalculatorPage() {
                 <h2 className="text-xl font-bold text-gray-900 mb-1">Income Sources</h2>
                 <p className="text-sm text-gray-500 mb-6">Enter your annual income from all your income sources.</p>
                 <div className="space-y-5">
-                  <InputField label="Salary/Employment Annual Income (₦)" value={income.salaryIncome}     onChange={(v) => setIncome((p) => ({ ...p, salaryIncome: v }))} />
-                  <InputField label="Business Income (₦)"                  value={income.businessIncome}   onChange={(v) => setIncome((p) => ({ ...p, businessIncome: v }))} />
-                  <InputField label="Rental Income (₦)"                    value={income.rentalIncome}     onChange={(v) => setIncome((p) => ({ ...p, rentalIncome: v }))} />
-                  <InputField label="Investment Income (₦)"                value={income.investmentIncome} onChange={(v) => setIncome((p) => ({ ...p, investmentIncome: v }))} />
-                  <InputField label="Other Income (₦)"                     value={income.otherIncome}      onChange={(v) => setIncome((p) => ({ ...p, otherIncome: v }))} />
+                  <MoneyInput label="Salary/Employment Annual Income (₦)" value={income.salaryIncome}     onChange={(v) => setIncome((p) => ({ ...p, salaryIncome: v }))} />
+                  <MoneyInput label="Business Income (₦)"                  value={income.businessIncome}   onChange={(v) => setIncome((p) => ({ ...p, businessIncome: v }))} />
+                  <MoneyInput label="Rental Income (₦)"                    value={income.rentalIncome}     onChange={(v) => setIncome((p) => ({ ...p, rentalIncome: v }))} />
+                  <MoneyInput label="Investment Income (₦)"                value={income.investmentIncome} onChange={(v) => setIncome((p) => ({ ...p, investmentIncome: v }))} />
+                  <MoneyInput label="Other Income (₦)"                     value={income.otherIncome}      onChange={(v) => setIncome((p) => ({ ...p, otherIncome: v }))} />
                 </div>
                 <div className="mt-6 pt-5 border-t border-gray-100 flex items-center justify-between">
                   <span className="text-sm text-gray-500">Total Income</span>
@@ -200,12 +277,12 @@ export default function TaxCalculatorPage() {
                 <h2 className="text-xl font-bold text-gray-900 mb-1">Allowable Deductions</h2>
                 <p className="text-sm text-gray-500 mb-6">If you have deductions to claim, fill in the following allowable deductions.</p>
                 <div className="space-y-5">
-                  <InputField label="Rent (₦)"                  value={deductions.rent}                onChange={(v) => setDeductions((p) => ({ ...p, rent: v }))}                hint="Rent relief is capped at ₦500,000" />
-                  <InputField label="Pension Contribution (₦)"  value={deductions.pensionContribution} onChange={(v) => setDeductions((p) => ({ ...p, pensionContribution: v }))} />
-                  <InputField label="NHF Contribution (₦)"      value={deductions.nhfContribution}     onChange={(v) => setDeductions((p) => ({ ...p, nhfContribution: v }))} />
-                  <InputField label="Life Insurance (₦)"        value={deductions.lifeInsurance}       onChange={(v) => setDeductions((p) => ({ ...p, lifeInsurance: v }))} />
-                  <InputField label="NHIS Premium (₦)"          value={deductions.nhisPremium}         onChange={(v) => setDeductions((p) => ({ ...p, nhisPremium: v }))} />
-                  <InputField label="Gratuity (₦)"              value={deductions.gratitude}           onChange={(v) => setDeductions((p) => ({ ...p, gratitude: v }))} />
+                  <MoneyInput label="Rent (₦)"                  value={deductions.rent}                onChange={(v) => setDeductions((p) => ({ ...p, rent: v }))}                hint="Rent relief is capped at ₦500,000" />
+                  <MoneyInput label="Pension Contribution (₦)"  value={deductions.pensionContribution} onChange={(v) => setDeductions((p) => ({ ...p, pensionContribution: v }))} />
+                  <MoneyInput label="NHF Contribution (₦)"      value={deductions.nhfContribution}     onChange={(v) => setDeductions((p) => ({ ...p, nhfContribution: v }))} />
+                  <MoneyInput label="Life Insurance (₦)"        value={deductions.lifeInsurance}       onChange={(v) => setDeductions((p) => ({ ...p, lifeInsurance: v }))} />
+                  <MoneyInput label="NHIS Premium (₦)"          value={deductions.nhisPremium}         onChange={(v) => setDeductions((p) => ({ ...p, nhisPremium: v }))} />
+                  <MoneyInput label="Gratuity (₦)"              value={deductions.gratitude}           onChange={(v) => setDeductions((p) => ({ ...p, gratitude: v }))} />
                 </div>
                 <div className="mt-6 pt-5 border-t border-gray-100 flex items-center justify-between">
                   <span className="text-sm text-gray-500">Total Deductions</span>
@@ -217,7 +294,7 @@ export default function TaxCalculatorPage() {
                 <button
                   onClick={() => mutation.mutate(buildPayload())}
                   disabled={isLoading}
-                  className="flex-1 flex items-center justify-center gap-2 bg-[#2C59C3] hover:bg-blue-700 disabled:opacity-60 text-white px-6 py-4 rounded-xl font-semibold transition-colors"
+                  className="flex-1 cursor-pointer flex items-center justify-center gap-2 bg-[#2C59C3] hover:bg-blue-700 disabled:opacity-60 text-white px-6 py-4 rounded-xl font-semibold transition-colors"
                 >
                   {isLoading
                     ? <div className="w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
@@ -225,15 +302,13 @@ export default function TaxCalculatorPage() {
                   }
                   {isLoading ? 'Calculating...' : 'Calculate Tax'}
                 </button>
-                <button onClick={handleReset} className="px-6 py-4 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-all">
+                <button onClick={handleReset} className="px-6 py-4  cursor-pointer rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-all">
                   Reset All
                 </button>
               </div>
             </div>
 
-            {/* Right: Sticky Results */}
             <div className="lg:sticky lg:top-8 space-y-6">
-              {/* Annual Tax Liability card */}
               <div className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-[#0B2239] via-[#0d2d4d] to-[#0a1f3d] p-7 text-white shadow-2xl">
                 <div className="absolute inset-0 opacity-10" style={{
                   backgroundImage: `linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)`,
@@ -265,7 +340,6 @@ export default function TaxCalculatorPage() {
                 </div>
               </div>
 
-              {/* Income Summary */}
               {(result || isLoading) && (
                 <div className={`bg-white border border-gray-200 rounded-2xl p-6 shadow-sm transition-opacity duration-300 ${isLoading ? 'opacity-50' : ''}`}>
                   <h3 className="text-lg font-bold text-gray-900 mb-2">Income Summary</h3>
@@ -277,7 +351,6 @@ export default function TaxCalculatorPage() {
                 </div>
               )}
 
-              {/* Tax Breakdown */}
               {(result?.bands?.length ?? 0) > 0 && (
                 <div className={`bg-white border border-gray-200 rounded-2xl p-6 shadow-sm transition-opacity duration-300 ${isLoading ? 'opacity-50' : ''}`}>
                   <h3 className="text-lg font-bold text-gray-900 mb-5">Tax Breakdown by Bracket</h3>
@@ -315,7 +388,6 @@ export default function TaxCalculatorPage() {
             </div>
           </div>
 
-          {/* Tax Brackets Reference */}
           {result?.bands && (
             <div className="mt-10 bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
               <h3 className="text-xl font-bold text-gray-900 mb-6">2025 Tax Brackets (Progressive Rates)</h3>
