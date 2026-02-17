@@ -4,7 +4,7 @@ import Image from 'next/image';
 
 export default function HeroSection() {
   return (
-    <section className="relative overflow-hidden bg-[#001F3F] h-[730px]">
+    <section className="relative overflow-hidden bg-[#001F3F] h-[1500px] md:h-[730px]">
 
       <div
         className="absolute inset-0 z-0  bg-cover"
@@ -49,7 +49,7 @@ export default function HeroSection() {
           <div className="relative">
             
             <div className="relative rounded-[40px]">
-              <div className="relative w-full h-[480px] lg:h-[450px]">
+              <div className="relative w-full h-[500px] lg:h-[450px]">
                 <Image
                   src="/Craftsman.svg"
                   alt="Happy craftsman"
@@ -59,7 +59,7 @@ export default function HeroSection() {
                 />
               </div>
 
-              <div className="absolute top-8 left-[-2] backdrop-blur-xl bg-white/20 border border-white/30 rounded-4xl px-5 py-10 w-[220px]">
+              <div className="absolute top-0 md:top-8  left-[-2] backdrop-blur-xl bg-white/20 border border-white/30 rounded-4xl px-5 py-10 w-[220px]">
                 <p className="text-white text-sm mb-1 opacity-90">
                   Tunde’s Estimated Refund
                 </p>
@@ -74,7 +74,7 @@ export default function HeroSection() {
                 </div>
               </div>
 
-              <div className="absolute text-center bottom-6 right-12 bg-[#FFEED0] rounded-3xl px-6 py-5 shadow-xl">
+              <div className="absolute text-center bottom-30 md:bottom-6 right-12 bg-[#FFEED0] rounded-3xl px-6 py-5 shadow-xl">
                 <p className="text-2xl font-bold text-[#000000]">
                   ₦5,000
                 </p>
