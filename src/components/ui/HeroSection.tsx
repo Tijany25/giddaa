@@ -74,7 +74,7 @@ export default function HeroSection() {
                 </div>
               </div>
 
-              <div className="absolute text-center bottom-30 md:bottom-6 right-12 bg-[#FFEED0] rounded-3xl px-6 py-5 shadow-xl">
+              <div className="absolute text-center bottom-30 md:bottom-6 right-8 md:right-16 bg-[#FFEED0] rounded-3xl px-6 py-5 shadow-xl">
                 <p className="text-2xl font-bold text-[#000000]">
                   ₦5,000
                 </p>
